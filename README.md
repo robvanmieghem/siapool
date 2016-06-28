@@ -1,5 +1,7 @@
 # siapool
 
+
+[![Build Status](https://travis-ci.org/robvanmieghem/siapool.svg?branch=master)](https://travis-ci.org/robvanmieghem/siapool)
 [![Join the chat at https://gitter.im/robvanmieghem/siapool](https://badges.gitter.im/robvanmieghem/siapool.svg)](https://gitter.im/robvanmieghem/siapool?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## Status
