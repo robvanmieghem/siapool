@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -68,8 +66,7 @@ func main() {
 
 	app.Action = func(c *cli.Context) {
 		// Print a startup message.
-		fmt.Println("Loading...")
-		loadStart := time.Now()
+		log.Infoln("Loading...")
 
 		dc := &siad.Siad{RPCAddr: rpcAddr, APIAddr: apiAddr}
 		go dc.Start()
@@ -81,9 +78,7 @@ func main() {
 		r.Path("/{payoutaddress}/miner/header").Methods("GET").Handler(http.HandlerFunc(poolapi.GetWorkHandler))
 		r.Path("/{payoutaddress}/miner/header").Methods("POST").Handler(http.HandlerFunc(poolapi.SubmitHeaderHandler))
 
-		// Print a 'startup complete' message.
-		startupTime := time.Since(loadStart)
-		fmt.Println("Finished loading in", startupTime.Seconds(), "seconds")
+		log.Infoln("Finished loading")
 
 		http.ListenAndServe(bindAddress, r)
 	}
