@@ -8,7 +8,8 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/gorilla/mux"
 	"github.com/robvanmieghem/siapool/api"
-	"github.com/robvanmieghem/siapool/siadclient"
+	"github.com/robvanmieghem/siapool/sharechain"
+	"github.com/robvanmieghem/siapool/siad"
 )
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "bind, b",
-			Usage:       "Bind address",
+			Usage:       "Pool bind address",
 			Value:       ":9985",
 			Destination: &bindAddress,
 		},
@@ -59,10 +60,13 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) {
-		dc := siadclient.NewSiadClient(siadAddress)
-		poolapi := api.PoolAPI{Fee: poolFee, SiadClient: dc}
+		dc := &siad.Siad{}
+		sc := sharechain.ShareChain{Siad: dc}
+		poolapi := api.PoolAPI{Fee: poolFee, ShareChain: sc}
 		r := mux.NewRouter()
 		r.Path("/fee").Methods("GET").Handler(http.HandlerFunc(poolapi.FeeHandler))
+		r.Path("/{payoutaddress}/miner/header").Methods("GET").Handler(http.HandlerFunc(poolapi.GetWorkHandler))
+		r.Path("/{payoutaddress}/miner/header").Methods("POST").Handler(http.HandlerFunc(poolapi.SubmitHeaderHandler))
 		http.ListenAndServe(bindAddress, r)
 	}
 
