@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -21,7 +23,7 @@ func main() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 
 	var debugLogging bool
-	var bindAddress, siadAddress string
+	var bindAddress, apiAddr, rpcAddr string
 	var poolFee int
 
 	app.Flags = []cli.Flag{
@@ -36,17 +38,22 @@ func main() {
 			Value:       ":9985",
 			Destination: &bindAddress,
 		},
-		cli.StringFlag{
-			Name:        "siad, s",
-			Usage:       "SIA daemon address",
-			Value:       "localhost:9980",
-			Destination: &siadAddress,
-		},
 		cli.IntFlag{
 			Name:        "fee, f",
 			Usage:       "Pool fee, in 0.01%",
 			Value:       200,
 			Destination: &poolFee,
+		},
+		cli.StringFlag{
+			Name:  "api-addr",
+			Value: "localhost:9980", Usage: "which host:port the API server listens on",
+			Destination: &apiAddr,
+		},
+		cli.StringFlag{
+			Name:        "rpc-addr",
+			Value:       ":9981",
+			Usage:       "which port the gateway listens on",
+			Destination: &rpcAddr,
 		},
 	}
 
@@ -60,13 +67,24 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) {
-		dc := &siad.Siad{}
+		// Print a startup message.
+		fmt.Println("Loading...")
+		loadStart := time.Now()
+
+		dc := &siad.Siad{RPCAddr: rpcAddr, APIAddr: apiAddr}
+		go dc.Start()
+
 		sc := sharechain.ShareChain{Siad: dc}
 		poolapi := api.PoolAPI{Fee: poolFee, ShareChain: sc}
 		r := mux.NewRouter()
 		r.Path("/fee").Methods("GET").Handler(http.HandlerFunc(poolapi.FeeHandler))
 		r.Path("/{payoutaddress}/miner/header").Methods("GET").Handler(http.HandlerFunc(poolapi.GetWorkHandler))
 		r.Path("/{payoutaddress}/miner/header").Methods("POST").Handler(http.HandlerFunc(poolapi.SubmitHeaderHandler))
+
+		// Print a 'startup complete' message.
+		startupTime := time.Since(loadStart)
+		fmt.Println("Finished loading in", startupTime.Seconds(), "seconds")
+
 		http.ListenAndServe(bindAddress, r)
 	}
 
