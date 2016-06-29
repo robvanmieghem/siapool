@@ -3,6 +3,106 @@
 	"GoVersion": "go1.6",
 	"Deps": [
 		{
+			"ImportPath": "github.com/NebulousLabs/Sia/api",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/build",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/crypto",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/encoding",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/modules",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/modules/consensus",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/modules/gateway",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/modules/transactionpool",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/persist",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/sync",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/types",
+			"Comment": "v0.6.0-beta-330-g722cb2a",
+			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/bolt",
+			"Comment": "v1.0-255-gdfb2120",
+			"Rev": "dfb21201d9270c1082d5fb0f07f500311ff72f18"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/demotemutex",
+			"Rev": "235395f71c4073ee8e71eb51476e7989043b9809"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/ed25519",
+			"Rev": "0e573b1741e255fe4a9903f4b2346a01fc45935a"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/entropy-mnemonics",
+			"Rev": "6afa27f8f200f600ad9d02b80329052598f2d965"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/merkletree",
+			"Rev": "f01b2e9039dd48372d3e54c5121bf4efba21b8dc"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/muxado",
+			"Rev": "f89aef61e0e86f743a3d6639cbc530939a6d0411"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/muxado/proto",
+			"Rev": "f89aef61e0e86f743a3d6639cbc530939a6d0411"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/muxado/proto/buffer",
+			"Rev": "f89aef61e0e86f743a3d6639cbc530939a6d0411"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/muxado/proto/ext",
+			"Rev": "f89aef61e0e86f743a3d6639cbc530939a6d0411"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/muxado/proto/frame",
+			"Rev": "f89aef61e0e86f743a3d6639cbc530939a6d0411"
+		},
+		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.8.7",
 			"Rev": "418b41d23a1bf978c06faea5313ba194650ac088"
@@ -13,12 +113,145 @@
 			"Rev": "c31a7975863e7810c92e2e288a9ab074f9a88f29"
 		},
 		{
+			"ImportPath": "github.com/dchest/blake2b",
+			"Rev": "3c8c640cd7bea3ca78209d812b5854442ab92fed"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",
 			"Rev": "26a6070f849969ba72b72256e9f14cf519751690"
+		},
+		{
+			"ImportPath": "github.com/huin/goupnp",
+			"Rev": "46bde78b11f3f021f2a511df138be9e2fc7506e8"
+		},
+		{
+			"ImportPath": "github.com/huin/goupnp/dcps/internetgateway1",
+			"Rev": "46bde78b11f3f021f2a511df138be9e2fc7506e8"
+		},
+		{
+			"ImportPath": "github.com/huin/goupnp/httpu",
+			"Rev": "46bde78b11f3f021f2a511df138be9e2fc7506e8"
+		},
+		{
+			"ImportPath": "github.com/huin/goupnp/scpd",
+			"Rev": "46bde78b11f3f021f2a511df138be9e2fc7506e8"
+		},
+		{
+			"ImportPath": "github.com/huin/goupnp/soap",
+			"Rev": "46bde78b11f3f021f2a511df138be9e2fc7506e8"
+		},
+		{
+			"ImportPath": "github.com/huin/goupnp/ssdp",
+			"Rev": "46bde78b11f3f021f2a511df138be9e2fc7506e8"
+		},
+		{
+			"ImportPath": "github.com/inconshreveable/go-update",
+			"Rev": "8152e7eb6ccf8679a64582a66b78519688d156ad"
+		},
+		{
+			"ImportPath": "github.com/inconshreveable/go-update/internal/binarydist",
+			"Rev": "8152e7eb6ccf8679a64582a66b78519688d156ad"
+		},
+		{
+			"ImportPath": "github.com/inconshreveable/go-update/internal/osext",
+			"Rev": "8152e7eb6ccf8679a64582a66b78519688d156ad"
+		},
+		{
+			"ImportPath": "github.com/julienschmidt/httprouter",
+			"Comment": "v1.1-29-g77366a4",
+			"Rev": "77366a47451a56bb3ba682481eed85b64fea14e8"
+		},
+		{
+			"ImportPath": "github.com/kardianos/osext",
+			"Rev": "29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/twofish",
+			"Rev": "811831de4c4dd03a0b8737233af3b36852386373"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "04557861f124410b768b1ba5bb3a91b705afbfc6"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/atom",
+			"Rev": "04557861f124410b768b1ba5bb3a91b705afbfc6"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/charset",
+			"Rev": "04557861f124410b768b1ba5bb3a91b705afbfc6"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "442cd600860ce722f6615730eb008a37a87b13ee"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/charmap",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/htmlindex",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/internal",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/internal/identifier",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/japanese",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/korean",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/simplifiedchinese",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/traditionalchinese",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/unicode",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/internal/tag",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/internal/utf8internal",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/language",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/runes",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/transform",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/unicode/norm",
+			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
 		}
 	]
 }
