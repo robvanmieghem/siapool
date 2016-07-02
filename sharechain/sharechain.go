@@ -1,6 +1,11 @@
 package sharechain
 
-import "github.com/robvanmieghem/siapool/siad"
+import (
+	"github.com/NebulousLabs/Sia/persist"
+	"github.com/NebulousLabs/Sia/types"
+	"github.com/NebulousLabs/demotemutex"
+	"github.com/robvanmieghem/siapool/siad"
+)
 
 const (
 	//ShareChainLength is the number of shares the chain can hold, given an average share every 10 seconds, it holds 4 days worth of shares
@@ -16,4 +21,34 @@ type ShareChain struct {
 
 	//Siad is the handler towards the sia daemon
 	Siad *siad.Siad
+
+	// Utilities
+	db         *persist.BoltDatabase
+	log        *persist.Logger
+	mu         demotemutex.DemoteMutex
+	persistDir string
+}
+
+// New returns a new ShareChain.
+// If there is an existing sharechain database present in the persist directory, it is loaded.
+func New(siadaemon *siad.Siad, persistDir string) (sc *ShareChain, err error) {
+
+	sc = &ShareChain{
+		Siad: siadaemon,
+
+		persistDir: persistDir,
+	}
+
+	// Initialize the persistence structures.
+	err = sc.initPersist()
+
+	return
+}
+
+//Share is a block with a lower difficulty target
+type Share struct {
+	BlockID   types.BlockID
+	ParentID  types.BlockID
+	Timestamp types.Timestamp
+	Miner     string
 }

@@ -53,9 +53,6 @@ func (s *Siad) Start() (err error) {
 
 	// Start serving api requests.
 	err = srv.Serve()
-	if err != nil {
-		return
-	}
 
 	return
 }

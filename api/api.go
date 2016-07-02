@@ -14,7 +14,7 @@ type PoolAPI struct {
 	//Fee is the poolfee in 0.01%
 	Fee int
 	//ShareChain for getting work and posting shares
-	ShareChain sharechain.ShareChain
+	ShareChain *sharechain.ShareChain
 }
 
 //FeeHandler writes the fee applied by the pool
@@ -36,5 +36,6 @@ func (pa *PoolAPI) GetWorkHandler(w http.ResponseWriter, r *http.Request) {
 //SubmitHeaderHandler is called by the miners to submit their shares
 // A 204 is returned when successful
 func (pa *PoolAPI) SubmitHeaderHandler(w http.ResponseWriter, r *http.Request) {
-
+	payoutaddress := mux.Vars(r)["payoutaddress"]
+	log.Debugln("Processing headersubmission from", payoutaddress)
 }

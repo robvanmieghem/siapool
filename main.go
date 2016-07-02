@@ -71,7 +71,10 @@ func main() {
 		dc := &siad.Siad{RPCAddr: rpcAddr, APIAddr: apiAddr}
 		go dc.Start()
 
-		sc := sharechain.ShareChain{Siad: dc}
+		sc, err := sharechain.New(dc, "p2pool")
+		if err != nil {
+			log.Fatal("Error initializing sharechain:", err)
+		}
 		poolapi := api.PoolAPI{Fee: poolFee, ShareChain: sc}
 		r := mux.NewRouter()
 		r.Path("/fee").Methods("GET").Handler(http.HandlerFunc(poolapi.FeeHandler))
