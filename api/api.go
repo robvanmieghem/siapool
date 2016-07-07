@@ -6,6 +6,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+
+	"github.com/NebulousLabs/Sia/encoding"
 	"github.com/robvanmieghem/siapool/sharechain"
 )
 
@@ -31,6 +33,16 @@ func (pa *PoolAPI) GetWorkHandler(w http.ResponseWriter, r *http.Request) {
 
 	payoutaddress := mux.Vars(r)["payoutaddress"]
 	log.Debugln("GetWork from", payoutaddress)
+
+	//TODO: check if the request was not made too fast after the previous one
+
+	bhfw, target, err := pa.ShareChain.HeaderForWork(payoutaddress)
+	if err != nil {
+		log.Error(err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.Write(encoding.MarshalAll(target, bhfw))
 }
 
 //SubmitHeaderHandler is called by the miners to submit their shares
@@ -38,4 +50,6 @@ func (pa *PoolAPI) GetWorkHandler(w http.ResponseWriter, r *http.Request) {
 func (pa *PoolAPI) SubmitHeaderHandler(w http.ResponseWriter, r *http.Request) {
 	payoutaddress := mux.Vars(r)["payoutaddress"]
 	log.Debugln("Processing headersubmission from", payoutaddress)
+
+	//TODO: reset the request for new header timeout
 }

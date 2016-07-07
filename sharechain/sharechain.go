@@ -52,3 +52,9 @@ type Share struct {
 	Timestamp types.Timestamp
 	Miner     string
 }
+
+//GetPPLNSSummary returns a mapping between miner addresses and the number of shares they found (within the ShareChainLength last number of shares)
+func (sc *ShareChain) GetPPLNSSummary() (sharesummary map[string]int, err error) {
+	//TODO
+	return
+}
