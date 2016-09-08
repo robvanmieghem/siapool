@@ -2,6 +2,7 @@ package sharechain
 
 import (
 	"github.com/NebulousLabs/Sia/persist"
+	siasync "github.com/NebulousLabs/Sia/sync"
 	"github.com/NebulousLabs/Sia/types"
 	"github.com/NebulousLabs/demotemutex"
 	"github.com/robvanmieghem/siapool/siad"
@@ -27,6 +28,10 @@ type ShareChain struct {
 	log        *persist.Logger
 	mu         demotemutex.DemoteMutex
 	persistDir string
+
+	// tg signals the Miner's goroutines to shut down and blocks until all
+	// goroutines have exited before returning from Close().
+	tg siasync.ThreadGroup
 }
 
 // New returns a new ShareChain.
