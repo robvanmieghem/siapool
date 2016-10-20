@@ -73,14 +73,25 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 		}
 	}
 
-	cc.Synced = cs.synced
+	// Grab the child target and the minimum valid child timestamp.
+	recentBlock := ce.AppliedBlocks[len(ce.AppliedBlocks)-1]
+	pb, err := getBlockMap(tx, recentBlock)
+	if err != nil {
+		cs.log.Critical("could not find process block for known block")
+	}
+	cc.ChildTarget = pb.ChildTarget
+	cc.MinimumValidChildTimestamp = cs.blockRuleHelper.minimumValidChildTimestamp(tx.Bucket(BlockMap), pb)
+
+	currentBlock := currentBlockID(tx)
+	if cs.synced && recentBlock == currentBlock {
+		cc.Synced = true
+	}
 	return cc, nil
 }
 
-// readlockUpdateSubscribers will inform all subscribers of a new update to the
-// consensus set. The call must be made with a demoted lock or a readlock.
-// readlockUpdateSubscribers does not alter the changelog, the changelog must
-// be updated beforehand.
+// readLockUpdateSubscribers will inform all subscribers of a new update to the
+// consensus set. readlockUpdateSubscribers does not alter the changelog, the
+// changelog must be updated beforehand.
 func (cs *ConsensusSet) readlockUpdateSubscribers(ce changeEntry) {
 	// Get the consensus change and send it to all subscribers.
 	var cc modules.ConsensusChange
@@ -161,12 +172,17 @@ func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubsc
 // As a special case, using an empty id as the start will have all the changes
 // sent to the modules starting with the genesis block.
 func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID) error {
+	err := cs.tg.Add()
+	if err != nil {
+		return err
+	}
+	defer cs.tg.Done()
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
-	cs.subscribers = append(cs.subscribers, subscriber)
 
 	// Get the input module caught up to the currenct consnesus set.
-	err := cs.initializeSubscribe(subscriber, start)
+	cs.subscribers = append(cs.subscribers, subscriber)
+	err = cs.initializeSubscribe(subscriber, start)
 	if err != nil {
 		// Remove the subscriber from the set of subscribers.
 		cs.subscribers = cs.subscribers[:len(cs.subscribers)-1]
@@ -180,6 +196,10 @@ func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSub
 // garbage collection and rescanning. If the subscriber is not found in the
 // subscriber database, no action is taken.
 func (cs *ConsensusSet) Unsubscribe(subscriber modules.ConsensusSetSubscriber) {
+	if cs.tg.Add() != nil {
+		return
+	}
+	defer cs.tg.Done()
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 

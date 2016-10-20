@@ -2,7 +2,7 @@ package siad
 
 import (
 	"github.com/NebulousLabs/Sia/api"
-	"github.com/NebulousLabs/Sia/crypto"
+	"github.com/NebulousLabs/Sia/build"
 	"github.com/NebulousLabs/Sia/modules"
 	"github.com/NebulousLabs/Sia/modules/consensus"
 	"github.com/NebulousLabs/Sia/modules/gateway"
@@ -14,45 +14,57 @@ import (
 type Siad struct {
 	RPCAddr string
 	APIAddr string
+	srv     *Server
 }
 
 //Start starts the siad daemon with the consensus, gateway and transactionpool modules
 func (s *Siad) Start() (err error) {
 
-	log.Infoln("Loading gateway...")
-	g, err := gateway.New(s.RPCAddr, modules.GatewayDir)
+	// Create the server and start serving daemon routes immediately.
+	log.Infoln("Loading siad...")
+	s.srv, err = NewServer(s.APIAddr)
+	if err != nil {
+		return err
+	}
+
+	servErrs := make(chan error)
+	go func() {
+		servErrs <- s.srv.Serve()
+	}()
+
+	log.Infoln("Loading siad/gateway...")
+	g, err := gateway.New(s.RPCAddr, true, modules.GatewayDir)
 	if err != nil {
 		return
 	}
 
-	log.Infoln("Loading consensus...")
-	cs, err := consensus.New(g, modules.ConsensusDir)
+	log.Infoln("Loading siad/consensus...")
+	cs, err := consensus.New(g, true, modules.ConsensusDir)
 	if err != nil {
 		return
 	}
 
-	log.Infoln("Loading transaction pool...")
+	log.Infoln("Loading siad/transaction pool...")
 	tpool, err := transactionpool.New(cs, g, modules.TransactionPoolDir)
 	if err != nil {
 		return err
 	}
 
-	srv, err := api.NewServer(s.APIAddr, "SIA-Agent", "", cs, nil, g, nil, nil, nil, tpool, nil)
-	if err != nil {
-		return
-	}
+	a := api.New("Sia-Agent", "", cs, nil, g, nil, nil, nil, tpool, nil)
 
-	// connect to 3 random bootstrap nodes
-	perm, err := crypto.Perm(len(modules.BootstrapPeers))
-	if err != nil {
-		return err
-	}
-	for _, i := range perm[:3] {
-		go g.Connect(modules.BootstrapPeers[i])
-	}
+	// connect the API to the server
+	s.srv.Handle("/", a)
 
-	// Start serving api requests.
-	err = srv.Serve()
+	select {
+	case err = <-servErrs:
+		build.Critical(err)
+	default:
+	}
+	return
+}
 
+//Close stops the siad daemon
+func (s *Siad) Close() (err error) {
+	err = s.srv.Close()
 	return
 }

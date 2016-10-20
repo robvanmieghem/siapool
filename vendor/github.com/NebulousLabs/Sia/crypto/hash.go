@@ -41,14 +41,7 @@ func NewHash() hash.Hash {
 // HashAll takes a set of objects as input, encodes them all using the encoding
 // package, and then hashes the result.
 func HashAll(objs ...interface{}) Hash {
-	// Ideally we would just write HashBytes(encoding.MarshalAll(objs)).
-	// Unfortunately, you can't pass 'objs' to MarshalAll without losing its
-	// type information; MarshalAll would just see interface{}s.
-	var b []byte
-	for _, obj := range objs {
-		b = append(b, encoding.Marshal(obj)...)
-	}
-	return HashBytes(b)
+	return HashBytes(encoding.MarshalAll(objs...))
 }
 
 // HashBytes takes a byte slice and returns the result.
@@ -66,6 +59,21 @@ func HashObject(obj interface{}) Hash {
 func (hs HashSlice) Len() int           { return len(hs) }
 func (hs HashSlice) Less(i, j int) bool { return bytes.Compare(hs[i][:], hs[j][:]) < 0 }
 func (hs HashSlice) Swap(i, j int)      { hs[i], hs[j] = hs[j], hs[i] }
+
+// LoadString takes a string, parses the hash value of the string, and sets the
+// value of the hash equal to the hash value of the string.
+func (h *Hash) LoadString(s string) error {
+	// *2 because there are 2 hex characters per byte.
+	if len(s) != HashSize*2 {
+		return ErrHashWrongLen
+	}
+	hBytes, err := hex.DecodeString(s)
+	if err != nil {
+		return errors.New("could not unmarshal crypto.Hash: " + err.Error())
+	}
+	copy(h[:], hBytes)
+	return nil
+}
 
 // MarshalJSON marshales a hash as a hex string.
 func (h Hash) MarshalJSON() ([]byte, error) {

@@ -13,49 +13,8 @@ import (
 	"github.com/NebulousLabs/muxado"
 )
 
-const (
-	// the gateway will not accept inbound connections above this threshold
-	fullyConnectedThreshold = 128
-
-	// the gateway will ask for more addresses below this threshold
-	minNodeListLen = 100
-
-	// minAcceptableVersion is the version below which the gateway will refuse to
-	// connect to peers and reject connection attempts.
-	//
-	// Reject peers < v0.4.0 as the previous version is v0.3.3 which is
-	// pre-hardfork.
-	minAcceptableVersion = "0.4.0"
-)
-
 var (
-	// The gateway will sleep this long between incoming connections.
-	acceptInterval = func() time.Duration {
-		switch build.Release {
-		case "dev":
-			return 3 * time.Second
-		case "standard":
-			return 3 * time.Second
-		case "testing":
-			return 10 * time.Millisecond
-		default:
-			panic("unrecognized build.Release")
-		}
-	}()
-	// the gateway will abort a connection attempt after this long
-	dialTimeout = func() time.Duration {
-		switch build.Release {
-		case "dev":
-			return 2 * time.Minute
-		case "standard":
-			return 2 * time.Minute
-		case "testing":
-			return 2 * time.Second
-		default:
-			panic("unrecognized build.Release")
-		}
-	}()
-
+	errPeerExists       = errors.New("already connected to this peer")
 	errPeerRejectedConn = errors.New("peer rejected connection")
 )
 
@@ -103,47 +62,35 @@ func (g *Gateway) addPeer(p *peer) {
 	go g.threadedListenPeer(p)
 }
 
-// randomPeer returns a random peer from the gateway's peer list.
-func (g *Gateway) randomPeer() (modules.NetAddress, error) {
-	if len(g.peers) > 0 {
-		r, _ := crypto.RandIntn(len(g.peers))
-		for addr := range g.peers {
-			if r <= 0 {
-				return addr, nil
-			}
-			r--
+// randomOutboundPeer returns a random outbound peer.
+func (g *Gateway) randomOutboundPeer() (modules.NetAddress, error) {
+	// Get the list of outbound peers.
+	var addrs []modules.NetAddress
+	for addr, peer := range g.peers {
+		if peer.Inbound {
+			continue
 		}
+		addrs = append(addrs, addr)
+	}
+	if len(addrs) == 0 {
+		return "", errNoPeers
 	}
 
-	return "", errNoPeers
+	// Of the remaining options, select one at random.
+	r, err := crypto.RandIntn(len(addrs))
+	if err != nil {
+		// TODO: This is not a developer bug, and 'Critical' is for
+		// developer bugs.
+		g.log.Critical(err)
+	}
+	return addrs[r], nil
 }
 
-// randomInboundPeer returns a random peer that initiated its connection.
-func (g *Gateway) randomInboundPeer() (modules.NetAddress, error) {
-	if len(g.peers) > 0 {
-		r, _ := crypto.RandIntn(len(g.peers))
-		for addr, p := range g.peers {
-			// only select inbound peers
-			if !p.Inbound {
-				continue
-			}
-			if r <= 0 {
-				return addr, nil
-			}
-			r--
-		}
-	}
-
-	return "", errNoPeers
-}
-
-// threadedListen handles incoming connection requests. If the connection is accepted,
-// the peer will be added to the Gateway's peer list.
-func (g *Gateway) threadedListen() {
-	if g.threads.Add() != nil {
-		return
-	}
-	defer g.threads.Done()
+// permanentListen handles incoming connection requests. If the connection is
+// accepted, the peer will be added to the Gateway's peer list.
+func (g *Gateway) permanentListen(closeChan chan struct{}) {
+	// Signal that the permanentListen thread has completed upon returning.
+	defer close(closeChan)
 
 	for {
 		conn, err := g.listener.Accept()
@@ -168,6 +115,7 @@ func (g *Gateway) threadedListen() {
 // threadedAcceptConn adds a connecting node as a peer.
 func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	if g.threads.Add() != nil {
+		conn.Close()
 		return
 	}
 	defer g.threads.Done()
@@ -182,7 +130,7 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 		return
 	}
 
-	if build.VersionCmp(remoteVersion, "1.0.0") < 0 {
+	if build.VersionCmp(remoteVersion, handshakeUpgradeVersion) < 0 {
 		err = g.managedAcceptConnOldPeer(conn, remoteVersion)
 	} else {
 		err = g.managedAcceptConnNewPeer(conn, remoteVersion)
@@ -206,10 +154,13 @@ func (g *Gateway) managedAcceptConnOldPeer(conn net.Conn, remoteVersion string) 
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
+	// Old peers are unable to give us a dialback port, so we can't verify
+	// whether or not they are local peers.
 	g.acceptPeer(&peer{
 		Peer: modules.Peer{
-			NetAddress: addr,
 			Inbound:    true,
+			Local:      false,
+			NetAddress: addr,
 			Version:    remoteVersion,
 		},
 		sess: muxado.Server(conn),
@@ -229,6 +180,14 @@ func (g *Gateway) managedAcceptConnNewPeer(conn net.Conn, remoteVersion string) 
 		return err
 	}
 
+	// Attempt to add the peer to the node list. If the add is successful and
+	// the address is a local address, mark the peer as a local peer.
+	local := false
+	err = g.managedAddUntrustedNode(remoteAddr)
+	if err != nil && remoteAddr.IsLocal() {
+		local = true
+	}
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -236,55 +195,61 @@ func (g *Gateway) managedAcceptConnNewPeer(conn net.Conn, remoteVersion string) 
 	if _, exists := g.peers[remoteAddr]; exists {
 		return fmt.Errorf("already connected to a peer on that address: %v", remoteAddr)
 	}
-
-	err = g.addNode(remoteAddr)
-	if err != nil && err != errNodeExists {
-		return fmt.Errorf("error adding node %q: %v", remoteAddr, err)
-	}
-	err = g.save()
-	if err != nil {
-		return fmt.Errorf("error saving node list: %v", err)
-	}
-
+	// Accept the peer.
 	g.acceptPeer(&peer{
 		Peer: modules.Peer{
-			NetAddress: remoteAddr,
 			Inbound:    true,
+			Local:      local,
+			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
 		sess: muxado.Server(conn),
 	})
-
 	return nil
 }
 
 // acceptPeer makes room for the peer if necessary by kicking out existing
 // peers, then adds the peer to the peer list.
 func (g *Gateway) acceptPeer(p *peer) {
-	// If we are already fully connected, kick out an old peer to make room
-	// for the new one. Importantly, prioritize kicking a peer with the same
-	// IP as the connecting peer. This protects against Sybil attacks.
-	if len(g.peers) >= fullyConnectedThreshold {
-		// first choose a random peer, preferably inbound. If have only
-		// outbound peers, we'll wind up kicking an outbound peer; but
-		// subsequent inbound connections will kick each other instead of
-		// continuing to replace outbound peers.
-		kick, err := g.randomInboundPeer()
-		if err != nil {
-			kick, _ = g.randomPeer()
-		}
-		// if another peer shares this IP, choose that one instead
-		for addr := range g.peers {
-			if addr.Host() == p.NetAddress.Host() {
-				kick = addr
-				break
-			}
-		}
-		g.peers[kick].sess.Close()
-		delete(g.peers, kick)
-		g.log.Printf("INFO: disconnected from %v to make room for %v", kick, p.NetAddress)
+	// If we are not fully connected, add the peer without kicking any out.
+	if len(g.peers) < fullyConnectedThreshold {
+		g.addPeer(p)
+		return
 	}
 
+	// Select a peer to kick. Outbound peers and local peers are not
+	// available to be kicked.
+	var addrs []modules.NetAddress
+	for addr := range g.peers {
+		// Do not kick outbound peers or local peers.
+		if !p.Inbound || p.Local {
+			continue
+		}
+
+		// Prefer kicking a peer with the same hostname.
+		if addr.Host() == p.NetAddress.Host() {
+			addrs = []modules.NetAddress{addr}
+			break
+		}
+		addrs = append(addrs, addr)
+	}
+	if len(addrs) == 0 {
+		// There is nobody suitable to kick, therefore do not kick anyone.
+		g.addPeer(p)
+		return
+	}
+
+	// Of the remaining options, select one at random.
+	r, err := crypto.RandIntn(len(addrs))
+	if err != nil {
+		// TODO: This is not a developer bug, and 'Critical' is for
+		// developer bugs.
+		g.log.Critical(err)
+	}
+	kick := addrs[r]
+	g.peers[kick].sess.Close()
+	delete(g.peers, kick)
+	g.log.Printf("INFO: disconnected from %v to make room for %v\n", kick, p.NetAddress)
 	g.addPeer(p)
 }
 
@@ -304,7 +269,7 @@ func acceptConnPortHandshake(conn net.Conn) (remoteAddr modules.NetAddress, err 
 		return "", fmt.Errorf("could not read remote peer's port: %v", err)
 	}
 	remoteAddr = modules.NetAddress(net.JoinHostPort(host, dialbackPort))
-	if err := remoteAddr.IsValid(); err != nil {
+	if err := remoteAddr.IsStdValid(); err != nil {
 		return "", fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddr, err)
 	}
 	// Sanity check to ensure that appending the port string to the host didn't
@@ -385,22 +350,21 @@ func acceptConnVersionHandshake(conn net.Conn, version string) (remoteVersion st
 // managedConnectOldPeer connects to peers < v1.0.0. The peer is added as a
 // node and a peer. The peer is only added if a nil error is returned.
 func (g *Gateway) managedConnectOldPeer(conn net.Conn, remoteVersion string, remoteAddr modules.NetAddress) error {
+	// Attempt to add the peer to the node list. If the add is successful and
+	// the address is a local address, mark the peer as a local peer.
+	local := false
+	err := g.managedAddUntrustedNode(remoteAddr)
+	if err != nil && remoteAddr.IsLocal() {
+		local = true
+	}
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
-
-	err := g.addNode(remoteAddr)
-	if err != nil && err != errNodeExists {
-		return err
-	}
-	err = g.save()
-	if err != nil {
-		return fmt.Errorf("error saving node list: %v", err)
-	}
-
 	g.addPeer(&peer{
 		Peer: modules.Peer{
-			NetAddress: remoteAddr,
 			Inbound:    false,
+			Local:      local,
+			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
 		sess: muxado.Client(conn),
@@ -421,22 +385,21 @@ func (g *Gateway) managedConnectNewPeer(conn net.Conn, remoteVersion string, rem
 		return err
 	}
 
+	// Attempt to add the peer to the node list. If the add is successful and
+	// the address is a local address, mark the peer as a local peer.
+	local := false
+	err = g.managedAddUntrustedNode(remoteAddr)
+	if err != nil && remoteAddr.IsLocal() {
+		local = true
+	}
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
-
-	err = g.addNode(remoteAddr)
-	if err != nil && err != errNodeExists {
-		return err
-	}
-	err = g.save()
-	if err != nil {
-		return fmt.Errorf("error saving node list: %v", err)
-	}
-
 	g.addPeer(&peer{
 		Peer: modules.Peer{
-			NetAddress: remoteAddr,
 			Inbound:    false,
+			Local:      local,
+			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
 		sess: muxado.Client(conn),
@@ -444,42 +407,43 @@ func (g *Gateway) managedConnectNewPeer(conn net.Conn, remoteVersion string, rem
 	return nil
 }
 
-// Connect establishes a persistent connection to a peer, and adds it to the
-// Gateway's peer list.
-func (g *Gateway) Connect(addr modules.NetAddress) error {
-	if err := g.threads.Add(); err != nil {
-		return err
-	}
-	defer g.threads.Done()
-
-	if addr == g.Address() {
+// managedConnect establishes a persistent connection to a peer, and adds it to
+// the Gateway's peer list.
+func (g *Gateway) managedConnect(addr modules.NetAddress) error {
+	// Perform verification on the input address.
+	g.mu.RLock()
+	gaddr := g.myAddr
+	g.mu.RUnlock()
+	if addr == gaddr {
 		return errors.New("can't connect to our own address")
 	}
-	if err := addr.IsValid(); err != nil {
+	if err := addr.IsStdValid(); err != nil {
 		return errors.New("can't connect to invalid address")
 	}
 	if net.ParseIP(addr.Host()) == nil {
 		return errors.New("address must be an IP address")
 	}
-
 	g.mu.RLock()
 	_, exists := g.peers[addr]
 	g.mu.RUnlock()
 	if exists {
-		return errors.New("peer already added")
+		return errPeerExists
 	}
 
-	conn, err := net.DialTimeout("tcp", string(addr), dialTimeout)
+	// Dial the peer, providing a means to interrupt the dial if a gateway
+	// shutdown call is made early.
+	conn, err := g.dial(addr)
 	if err != nil {
 		return err
 	}
+
+	// Perform peer initialization.
 	remoteVersion, err := connectVersionHandshake(conn, build.Version)
 	if err != nil {
 		conn.Close()
 		return err
 	}
-
-	if build.VersionCmp(remoteVersion, "1.0.0") < 0 {
+	if build.VersionCmp(remoteVersion, handshakeUpgradeVersion) < 0 {
 		err = g.managedConnectOldPeer(conn, remoteVersion, addr)
 	} else {
 		err = g.managedConnectNewPeer(conn, remoteVersion, addr)
@@ -488,7 +452,6 @@ func (g *Gateway) Connect(addr modules.NetAddress) error {
 		conn.Close()
 		return err
 	}
-
 	g.log.Debugln("INFO: connected to new peer", addr)
 
 	// call initRPCs
@@ -500,7 +463,7 @@ func (g *Gateway) Connect(addr modules.NetAddress) error {
 			}
 			defer g.threads.Done()
 
-			err := g.RPC(addr, name, fn)
+			err := g.managedRPC(addr, name, fn)
 			if err != nil {
 				g.log.Debugf("INFO: RPC %q on peer %q failed: %v", name, addr, err)
 			}
@@ -509,6 +472,111 @@ func (g *Gateway) Connect(addr modules.NetAddress) error {
 	g.mu.RUnlock()
 
 	return nil
+}
+
+// permanentPeerManager tries to keep the Gateway well-connected. As long as
+// the Gateway is not well-connected, it tries to connect to random nodes.
+func (g *Gateway) permanentPeerManager(closedChan chan struct{}) {
+	// Send a signal upon shutdown.
+	defer close(closedChan)
+
+	for {
+		// Determine the number of outbound peers.
+		numOutboundPeers := 0
+		g.mu.RLock()
+		for _, p := range g.peers {
+			if !p.Inbound {
+				numOutboundPeers++
+			}
+		}
+		g.mu.RUnlock()
+		// If the gateway is well connected, sleep for a while and then try
+		// again.
+		if numOutboundPeers >= wellConnectedThreshold {
+			select {
+			case <-time.After(wellConnectedDelay):
+			case <-g.threads.StopChan():
+				// Interrupt the thread if the shutdown signal is issued.
+				return
+			}
+			continue
+		}
+
+		// Fetch a random node.
+		g.mu.RLock()
+		addr, err := g.randomNode()
+		g.mu.RUnlock()
+		// If there was an error, log the error and then wait a while before
+		// trying again.
+		//
+		// Also wait a while and try again if there is at least one outbound
+		// peer and the selected peer is local. We do not want all of our
+		// outbound peers to be local peers.
+		if err != nil || (numOutboundPeers > 0 && addr.IsLocal() && build.Release != "testing") {
+			select {
+			case <-time.After(noNodesDelay):
+			case <-g.threads.StopChan():
+				// Interrupt the thread if the shutdown signal is issued.
+				return
+			}
+			continue
+		}
+
+		// Try connecting to that peer in a goroutine.
+		go func() {
+			if err := g.threads.Add(); err != nil {
+				return
+			}
+			defer g.threads.Done()
+
+			err := g.managedConnect(addr)
+			if err == errPeerExists {
+				// This peer is already connected to us. Safety around the
+				// oubound peers relates to the fact that we have picked out
+				// the outbound peers instead of allow the attacker to pick out
+				// the peers for us. Because we have made the selection, it is
+				// okay to set the peer as an outbound peer.
+				//
+				// The nodelist size check ensures that an attacker can't flood
+				// a new node with a bunch of inbound requests. Doing so would
+				// result in a nodelist that's entirely full of attacker nodes.
+				// There's not much we can do about that anyway, but at least
+				// we can hold off making attacker nodes 'outbound' peers until
+				// our nodelist has had time to fill up naturally.
+				g.mu.Lock()
+				p, exists := g.peers[addr]
+				if exists {
+					// Have to check it exists because we released the lock, a
+					// race condition could mean that the peer was disconnected
+					// before this code block was reached.
+					p.Inbound = false
+				}
+				g.mu.Unlock()
+			} else if err != nil {
+				g.log.Debugln("WARN: automatic connect failed:", err)
+			}
+		}()
+
+		// Wait a bit before trying the next peer. The peer connections are
+		// non-blocking, so they should be spaced out to avoid spinning up an
+		// uncontrolled number of threads and therefore peer connections.
+		select {
+		case <-time.After(acquiringPeersDelay):
+		case <-g.threads.StopChan():
+			// Interrupt the thread if the shutdown signal is issued.
+			return
+		}
+	}
+}
+
+// Connect establishes a persistent connection to a peer, and adds it to the
+// Gateway's peer list.
+func (g *Gateway) Connect(addr modules.NetAddress) error {
+	if err := g.threads.Add(); err != nil {
+		return err
+	}
+	defer g.threads.Done()
+	return g.managedConnect(addr)
 }
 
 // Disconnect terminates a connection to a peer and removes it from the
@@ -534,59 +602,6 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 
 	g.log.Println("INFO: disconnected from peer", addr)
 	return nil
-}
-
-// threadedPeerManager tries to keep the Gateway well-connected. As long as
-// the Gateway is not well-connected, it tries to connect to random nodes.
-func (g *Gateway) threadedPeerManager() {
-	if g.threads.Add() != nil {
-		return
-	}
-	defer g.threads.Done()
-
-	for {
-		// If we are well-connected, sleep in increments of five minutes until
-		// we are no longer well-connected.
-		g.mu.RLock()
-		numOutboundPeers := 0
-		for _, p := range g.peers {
-			if !p.Inbound {
-				numOutboundPeers++
-			}
-		}
-		addr, err := g.randomNode()
-		g.mu.RUnlock()
-		if numOutboundPeers >= modules.WellConnectedThreshold {
-			select {
-			case <-time.After(5 * time.Minute):
-			case <-g.threads.StopChan():
-				return
-			}
-			continue
-		}
-
-		// Try to connect to a random node. Instead of blocking on Connect, we
-		// spawn a goroutine and sleep for five seconds. This allows us to
-		// continue making connections if the node is unresponsive.
-		if err == nil {
-			go func() {
-				if g.threads.Add() != nil {
-					return
-				}
-				defer g.threads.Done()
-
-				connectErr := g.Connect(addr)
-				if connectErr != nil {
-					g.log.Debugln("WARN: automatic connect failed:", connectErr)
-				}
-			}()
-		}
-		select {
-		case <-time.After(5 * time.Second):
-		case <-g.threads.StopChan():
-			return
-		}
-	}
 }
 
 // Peers returns the addresses currently connected to the Gateway.

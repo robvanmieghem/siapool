@@ -8,12 +8,8 @@ const (
 	// GatewayDir is the name of the directory used to store the gateway's
 	// persistent data.
 	GatewayDir = "gateway"
-	// WellConnectedThreshold is the number of outbound connections at which the
-	// gateway will not attempt to make new outbound connections.
-	WellConnectedThreshold = 8
 )
 
-// TODO: Move this and its functionality into the gateway package.
 var (
 	// BootstrapPeers is a list of peers that can be used to find other peers -
 	// when a client first connects to the network, the only options for
@@ -35,9 +31,10 @@ var (
 type (
 	// Peer contains all the info necessary to Broadcast to a peer.
 	Peer struct {
+		Inbound    bool       `json:"inbound"`
+		Local      bool       `json:"local"`
 		NetAddress NetAddress `json:"netaddress"`
 		Version    string     `json:"version"`
-		Inbound    bool       `json:"inbound"`
 	}
 
 	// A PeerConn is the connection type used when communicating with peers during

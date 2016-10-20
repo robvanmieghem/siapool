@@ -1,61 +1,62 @@
 {
 	"ImportPath": "github.com/robvanmieghem/siapool",
 	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
 	"Deps": [
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/api",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/build",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/crypto",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/encoding",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/modules",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/modules/consensus",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/modules/gateway",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/modules/transactionpool",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/persist",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/sync",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/Sia/types",
-			"Comment": "v0.6.0-beta-330-g722cb2a",
-			"Rev": "722cb2aafea6d799333a924e3889030c8a83bbc8"
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/bolt",
@@ -104,8 +105,8 @@
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.8.7",
-			"Rev": "418b41d23a1bf978c06faea5313ba194650ac088"
+			"Comment": "v0.10.0-28-ga283a10",
+			"Rev": "a283a10442df8dc09befd873fab202bf8a253d6a"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
@@ -118,11 +119,13 @@
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
-			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
+			"Comment": "v1.1-4-gaed02d1",
+			"Rev": "aed02d124ae4a0e94fea4541c8effd05bf0c8296"
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",
-			"Rev": "26a6070f849969ba72b72256e9f14cf519751690"
+			"Comment": "v1.1-15-gd391bea",
+			"Rev": "d391bea3118c9fc17a88d62c9189bb791255e0ef"
 		},
 		{
 			"ImportPath": "github.com/huin/goupnp",
@@ -252,6 +255,35 @@
 		{
 			"ImportPath": "golang.org/x/text/unicode/norm",
 			"Rev": "4440cd4f4c2ea31e1872e00de675a86d0c19006c"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/Sia/vendor/golang.org/x/crypto/twofish",
+			"Comment": "v1.0.1-199-geb7b6ca",
+			"Rev": "eb7b6ca0d652145bc5caefa46cb1ebe9b7dd071b"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp/vendor/github.com/huin/goupnp",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp/vendor/github.com/huin/goupnp/dcps/internetgateway1",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp/vendor/github.com/huin/goupnp/httpu",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp/vendor/github.com/huin/goupnp/scpd",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp/vendor/github.com/huin/goupnp/soap",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/go-upnp/vendor/github.com/huin/goupnp/ssdp",
+			"Rev": "54272a37f4032d9103cdc31b6f57940eaece7902"
 		}
 	]
 }

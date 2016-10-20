@@ -1,8 +1,10 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -68,12 +70,22 @@ func main() {
 		// Print a startup message.
 		log.Infoln("Loading...")
 
-		dc := &siad.Siad{RPCAddr: rpcAddr, APIAddr: apiAddr}
-		go dc.Start()
+		// Create the listener for the server
+		l, err := net.Listen("tcp", bindAddress)
+		if err != nil {
+			log.Fatal("Error listening on", bindAddress, err)
+		}
 
+		dc := &siad.Siad{RPCAddr: rpcAddr, APIAddr: apiAddr}
+		err = dc.Start()
+		if err != nil {
+			log.Fatal("Error running embedded siad: ", err)
+		}
+
+		log.Infoln("Loading sharechain...")
 		sc, err := sharechain.New(dc, "p2pool")
 		if err != nil {
-			log.Fatal("Error initializing sharechain:", err)
+			log.Fatal("Error initializing sharechain: ", err)
 		}
 		poolapi := api.PoolAPI{Fee: poolFee, ShareChain: sc}
 		r := mux.NewRouter()
@@ -81,9 +93,21 @@ func main() {
 		r.Path("/{payoutaddress}/miner/header").Methods("GET").Handler(http.HandlerFunc(poolapi.GetWorkHandler))
 		r.Path("/{payoutaddress}/miner/header").Methods("POST").Handler(http.HandlerFunc(poolapi.SubmitHeaderHandler))
 
-		log.Infoln("Finished loading")
+		// stop the server if a kill signal is caught
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, os.Kill)
+		go func() {
+			<-sigChan
+			log.Infoln("\rCaught stop signal, quitting...")
+			dc.Close()
+			l.Close()
+		}()
+		log.Infoln("Listening for miner requests")
+		srv := &http.Server{
+			Handler: r,
+		}
+		srv.Serve(l)
 
-		http.ListenAndServe(bindAddress, r)
 	}
 
 	app.Run(os.Args)
